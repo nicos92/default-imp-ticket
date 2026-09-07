@@ -127,9 +127,15 @@ func GenerarZPL(codigo string, fecha time.Time) string {
 	^FH\^FD>:Z>5123456>67^FS
 	^PQ1,0,1,Y
 	^FO0,30^A0R,50,90^FDZ%s^FS
+
+	^FO640,80^A0R,35,35^FD%s^FS
+	^BY3,3,240^FT640,368^BCB,,N,N
+	^FH\^FD>:Z>5123456>67^FS
+	^PQ1,0,1,Y
+	^FO350,30^A0R,50,90^FDZ%s^FS
 	^XZ`
 
-	return fmt.Sprintf(plantillaZPL, fechaFormateada, codigo)
+	return fmt.Sprintf(plantillaZPL, fechaFormateada, codigo, fechaFormateada, codigo)
 }
 
 func main() {
