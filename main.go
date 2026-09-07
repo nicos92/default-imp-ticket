@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -13,11 +14,11 @@ import (
 )
 
 const (
-	archivoEstado = "ultimo_codigo.txt"
-	maxContador   = 9999999
+	maxContador = 9999999
 )
 
 var (
+	archivoEstado         = ""
 	winspool              = syscall.NewLazyDLL("winspool.drv")
 	procGetDefaultPrinter = winspool.NewProc("GetDefaultPrinterW")
 	procOpenPrinter       = winspool.NewProc("OpenPrinterW")
@@ -213,7 +214,23 @@ func LeerUltimoNumero() int {
 }
 
 func GuardarUltimoNumero(num int) error {
-	return os.WriteFile(archivoEstado, fmt.Appendf(nil, "%d", num), 0644)
+
+	baseDir, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Println("Error al obtener el directorio de configuración:", err)
+		return err
+	}
+
+	appDir := filepath.Join(baseDir, "Nicolas-Sandoval", "default-imp-ticket")
+	err = os.MkdirAll(appDir, 0755)
+	if err != nil {
+		fmt.Println("Error al crear el directorio de la aplicación:", err)
+		return err
+	}
+
+	configPath := filepath.Join(appDir, "config")
+	archivoEstado = configPath
+	return os.WriteFile(configPath, fmt.Appendf(nil, "%d", num), 0644)
 }
 
 func ImprimirPares(cantidadCodigos int) error {
@@ -224,7 +241,10 @@ func ImprimirPares(cantidadCodigos int) error {
 
 	ultimoNumero := LeerUltimoNumero()
 
-	confGuardarUltimoNumero(ultimoNumero, cantidadCodigos)
+	errConf := confGuardarUltimoNumero(ultimoNumero, cantidadCodigos)
+	if errConf != nil {
+		return err
+	}
 	totalPares := cantidadCodigos / 2
 	contador := ultimoNumero
 	for i := range totalPares {
@@ -249,12 +269,13 @@ func ImprimirPares(cantidadCodigos int) error {
 		fmt.Printf("Par %d/%d impreso: Z%s y Z%s\n", i+1, totalPares, c1, c2)
 	}
 
-	confGuardarUltimoNumero(ultimoNumero, cantidadCodigos)
 	return nil
 }
 
-func confGuardarUltimoNumero(contador int, cantidadCodigos int) {
+func confGuardarUltimoNumero(contador int, cantidadCodigos int) error {
 	if err := GuardarUltimoNumero(contador + cantidadCodigos); err != nil {
 		fmt.Printf("No se pudo guardar el archivo de estado: %v\n", err)
+		return err
 	}
+	return nil
 }
