@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -137,26 +139,65 @@ func GenerarZPL(codigo1, codigo2 string, fecha time.Time) string {
 }
 
 func main() {
-	fmt.Println("Buscando impresora predeterminada...")
 
-	nombreImpresora, err := ObtenerImpresoraPredeterminada()
+	_, err := ObtenerImpresoraPredeterminada()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	fmt.Printf("Impresora predeterminada: '%s'\n", nombreImpresora)
+	var entrada string
+	var cantidad int
+	for entrada != "0" {
+		entrada, err = leerTexto(`Ingrese una opción de cantidades a imprimir.
 
-	cantidadAImprimir := 2
+Opciones:
+1- 100 etiqutas.
+2- 1.000 etiqutas.
+3- 3.000 etiqutas.
+4- 5.000 etiqutas.
+5- 10.000 etiqutas.
+0- Salir
+`)
 
-	fmt.Printf("Iniciando impresión de %d códigos (%d pares)...\n", cantidadAImprimir, cantidadAImprimir/2)
+		switch entrada {
+		case "1":
+			cantidad = 100
+		case "2":
+			cantidad = 1000
+		case "3":
+			cantidad = 3000
+		case "4":
+			cantidad = 5000
+		case "5":
+			cantidad = 10000
+		case "0":
+			return
+		default:
+			fmt.Println("Opción no valida.")
+			continue
+		}
 
-	if err := ImprimirPares(cantidadAImprimir); err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
+		fmt.Printf("Iniciando impresión de %d códigos (%d pares)...\n", cantidad, cantidad/2)
+
+		if err := ImprimirPares(cantidad); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+
+		fmt.Println("Proceso finalizado correctamente.")
+	}
+}
+
+func leerTexto(mensaje string) (string, error) {
+	fmt.Print(mensaje)
+	entrada, err := bufio.NewReader(os.Stdin).ReadString('\n')
+
+	if err != nil {
+		return "", errors.New("Error al leer la entrada de texto")
 	}
 
-	fmt.Println("Proceso finalizado correctamente.")
+	return strings.TrimSpace(entrada), nil
 }
 
 func LeerUltimoNumero() int {
@@ -181,9 +222,11 @@ func ImprimirPares(cantidadCodigos int) error {
 		return err
 	}
 
-	contador := LeerUltimoNumero()
-	totalPares := cantidadCodigos / 2
+	ultimoNumero := LeerUltimoNumero()
 
+	confGuardarUltimoNumero(ultimoNumero, cantidadCodigos)
+	totalPares := cantidadCodigos / 2
+	contador := ultimoNumero
 	for i := range totalPares {
 
 		contador++
@@ -203,12 +246,15 @@ func ImprimirPares(cantidadCodigos int) error {
 			return fmt.Errorf("error en par %d: %v", i+1, err)
 		}
 
-		if err := GuardarUltimoNumero(contador); err != nil {
-			fmt.Printf("No se pudo guardar el archivo de estado: %v\n", err)
-		}
-
 		fmt.Printf("Par %d/%d impreso: Z%s y Z%s\n", i+1, totalPares, c1, c2)
 	}
 
+	confGuardarUltimoNumero(ultimoNumero, cantidadCodigos)
 	return nil
+}
+
+func confGuardarUltimoNumero(contador int, cantidadCodigos int) {
+	if err := GuardarUltimoNumero(contador + cantidadCodigos); err != nil {
+		fmt.Printf("No se pudo guardar el archivo de estado: %v\n", err)
+	}
 }
