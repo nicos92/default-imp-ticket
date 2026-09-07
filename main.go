@@ -127,20 +127,20 @@ func GenerarZPL(codigo1, codigo2 string, fecha time.Time) string {
 	// Usamos fmt.Sprintf para reemplazar las variables %s en el ZPL
 	plantillaZPL := `^XA
 	^MMT
-	^PW751
+	^PW832
 	^LL392
 	^LS0
-	^FO290,80^A0R,35,35^FD%s^FS
-	^BY3,3,240^FT290,368^BCB,,N,N
+	^FO310,80^A0R,35,35^FD%s^FS
+	^BY3,3,240^FT310,368^BCB,,N,N
 	^FH\^FD>:Z>5123456>67^FS
 	^PQ1,0,1,Y
-	^FO0,30^A0R,50,90^FDZ%s^FS
+	^FO010,030^A0R,50,90^FDZ%s^FS
 
-	^FO680,80^A0R,35,35^FD%s^FS
-	^BY3,3,240^FT680,368^BCB,,N,N
+	^FO720,80^A0R,35,35^FD%s^FS
+	^BY3,3,240^FT720,368^BCB,,N,N
 	^FH\^FD>:Z>5123456>67^FS
 	^PQ1,0,1,Y
-	^FO380,30^A0R,50,90^FDZ%s^FS
+	^FO420,030^A0R,50,90^FDZ%s^FS
 	^XZ`
 
 	return fmt.Sprintf(plantillaZPL, fechaFormateada, codigo1, fechaFormateada, codigo2)
@@ -172,7 +172,7 @@ func main() {
 	// fmt.Println("¡Documento enviado con éxito a la cola de impresión!")
 
 	// Ejemplo: Solicitar impresión de 10 códigos (5 pares)
-	cantidadAImprimir := 4
+	cantidadAImprimir := 100
 
 	fmt.Printf("Iniciando impresión de %d códigos (%d pares)...\n", cantidadAImprimir, cantidadAImprimir/2)
 
