@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -110,6 +111,27 @@ func ImprimirTextoPlano(nombreImpresora string, texto string) error {
 	return nil
 }
 
+// GenerarZPLCrea la plantilla ZPL con los datos dinámicos
+func GenerarZPL(codigo string, fecha time.Time) string {
+	// Formateamos la fecha en español/estándar (ej: 07/09/2026 14:30)
+	fechaFormateada := fecha.Format("02/01/2006 15:04")
+
+	// Usamos fmt.Sprintf para reemplazar las variables %s en el ZPL
+	plantillaZPL := `^XA
+	^MMT
+	^PW751
+	^LL392
+	^LS0
+	^FO290,80^A0R,35,35^FD%s^FS
+	^BY3,3,240^FT290,368^BCB,,N,N
+	^FH\^FD>:Z>5123456>67^FS
+	^PQ1,0,1,Y
+	^FO0,30^A0R,50,90^FDZ%s^FS
+	^XZ`
+
+	return fmt.Sprintf(plantillaZPL, fechaFormateada, codigo)
+}
+
 func main() {
 	fmt.Println("Buscando impresora predeterminada...")
 
@@ -122,8 +144,10 @@ func main() {
 	fmt.Printf("Impresora predeterminada: '%s'\n", nombreImpresora)
 
 	// Texto de prueba para imprimir (incluimos salto de línea y avance de página/corte)
-	mensaje := "^XA^MMT^PW751^LL392^LS0^BY3,3,240^FT240,368^BCB,,N,N^FH\\^FD>:Z>5123456>67^FS^PQ1,0,1,Y^XZ            \n\n\n\x0C" // \x0C es Form Feed (Avanzar hoja)
+	// mensajeUno := "^XA^MMT^PW751^LL392^LS0^BY3,3,240^FT240,368^BCB,,N,N^FH\\^FD>:Z>5123456>67^FS^PQ1,0,1,Y^XZ            \n\n\n\x0C" // \x0C es Form Feed (Avanzar hoja)
 
+	fechaActual := time.Now()
+	mensaje := GenerarZPL("1234567", fechaActual)
 	fmt.Println("Enviando texto a la impresora...")
 	err = ImprimirTextoPlano(nombreImpresora, mensaje)
 	if err != nil {
