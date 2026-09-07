@@ -2,9 +2,17 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
+)
+
+const (
+	archivoEstado = "ultimo_codigo.txt"
+	maxContador   = 9999999
 )
 
 var (
@@ -112,7 +120,7 @@ func ImprimirTextoPlano(nombreImpresora string, texto string) error {
 }
 
 // GenerarZPLCrea la plantilla ZPL con los datos dinámicos
-func GenerarZPL(codigo string, fecha time.Time) string {
+func GenerarZPL(codigo1, codigo2 string, fecha time.Time) string {
 	// Formateamos la fecha en español/estándar (ej: 07/09/2026 14:30)
 	fechaFormateada := fecha.Format("02/01/2006 15:04")
 
@@ -128,14 +136,14 @@ func GenerarZPL(codigo string, fecha time.Time) string {
 	^PQ1,0,1,Y
 	^FO0,30^A0R,50,90^FDZ%s^FS
 
-	^FO640,80^A0R,35,35^FD%s^FS
-	^BY3,3,240^FT640,368^BCB,,N,N
+	^FO680,80^A0R,35,35^FD%s^FS
+	^BY3,3,240^FT680,368^BCB,,N,N
 	^FH\^FD>:Z>5123456>67^FS
 	^PQ1,0,1,Y
-	^FO350,30^A0R,50,90^FDZ%s^FS
+	^FO380,30^A0R,50,90^FDZ%s^FS
 	^XZ`
 
-	return fmt.Sprintf(plantillaZPL, fechaFormateada, codigo, fechaFormateada, codigo)
+	return fmt.Sprintf(plantillaZPL, fechaFormateada, codigo1, fechaFormateada, codigo2)
 }
 
 func main() {
@@ -152,14 +160,85 @@ func main() {
 	// Texto de prueba para imprimir (incluimos salto de línea y avance de página/corte)
 	// mensajeUno := "^XA^MMT^PW751^LL392^LS0^BY3,3,240^FT240,368^BCB,,N,N^FH\\^FD>:Z>5123456>67^FS^PQ1,0,1,Y^XZ            \n\n\n\x0C" // \x0C es Form Feed (Avanzar hoja)
 
-	fechaActual := time.Now()
-	mensaje := GenerarZPL("1234567", fechaActual)
-	fmt.Println("Enviando texto a la impresora...")
-	err = ImprimirTextoPlano(nombreImpresora, mensaje)
-	if err != nil {
-		fmt.Printf("Error al imprimir: %v\n", err)
+	// fechaActual := time.Now()
+	// mensaje := GenerarZPL("1234567", fechaActual)
+	// fmt.Println("Enviando texto a la impresora...")
+	// err = ImprimirTextoPlano(nombreImpresora, mensaje)
+	// if err != nil {
+	// 	fmt.Printf("Error al imprimir: %v\n", err)
+	// 	return
+	// }
+
+	// fmt.Println("¡Documento enviado con éxito a la cola de impresión!")
+
+	// Ejemplo: Solicitar impresión de 10 códigos (5 pares)
+	cantidadAImprimir := 4
+
+	fmt.Printf("Iniciando impresión de %d códigos (%d pares)...\n", cantidadAImprimir, cantidadAImprimir/2)
+
+	if err := ImprimirPares(cantidadAImprimir); err != nil {
+		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	fmt.Println("¡Documento enviado con éxito a la cola de impresión!")
+	fmt.Println("Proceso finalizado correctamente.")
+}
+
+// 3. Manejo del Estado (Lectura/Escritura)
+func LeerUltimoNumero() int {
+	data, err := os.ReadFile(archivoEstado)
+	if err != nil {
+		return 0
+	}
+	num, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		return 0
+	}
+	return num
+}
+
+func GuardarUltimoNumero(num int) error {
+	return os.WriteFile(archivoEstado, []byte(fmt.Sprintf("%d", num)), 0644)
+}
+
+// 5. Función Principal de Impresión en Pares
+func ImprimirPares(cantidadCodigos int) error {
+	impresora, err := ObtenerImpresoraPredeterminada()
+	if err != nil {
+		return err
+	}
+
+	contador := LeerUltimoNumero()
+	totalPares := cantidadCodigos / 2
+
+	for i := range totalPares {
+		// Primer código del par
+		contador++
+		if contador > maxContador {
+			contador = 1
+		}
+		c1 := fmt.Sprintf("%07d", contador)
+
+		// Segundo código del par
+		contador++
+		if contador > maxContador {
+			contador = 1
+		}
+		c2 := fmt.Sprintf("%07d", contador)
+
+		// Generar y enviar ZPL
+		zpl := GenerarZPL(c1, c2, time.Now())
+		if err := ImprimirTextoPlano(impresora, zpl); err != nil {
+			return fmt.Errorf("error en par %d: %v", i+1, err)
+		}
+
+		// Guardar progreso
+		if err := GuardarUltimoNumero(contador); err != nil {
+			fmt.Printf("No se pudo guardar el archivo de estado: %v\n", err)
+		}
+
+		fmt.Printf("Par %d/%d impreso: Z%s y Z%s\n", i+1, totalPares, c1, c2)
+	}
+
+	return nil
 }
