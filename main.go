@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/nicos92/default-imp-ticket/inputs"
 )
 
 const (
@@ -73,7 +75,7 @@ func ImprimirTextoPlano(nombreImpresora string, texto string) error {
 	}
 	defer procClosePrinter.Call(hPrinter)
 
-	docName, _ := syscall.UTF16PtrFromString("Trabajo de Go")
+	docName, _ := syscall.UTF16PtrFromString("NSS-Default-Imp-Ticket")
 	dataType, _ := syscall.UTF16PtrFromString("RAW")
 
 	di := DOC_INFO_1{
@@ -150,6 +152,7 @@ func main() {
 	var entrada string
 	var cantidad int
 	for entrada != "0" {
+		inputs.CallClear()
 		entrada, err = leerTexto(`Ingrese una opción de cantidades a imprimir.
 
 Opciones:
@@ -187,6 +190,7 @@ Opciones:
 		}
 
 		fmt.Println("Proceso finalizado correctamente.")
+		time.Sleep(3 * time.Second)
 	}
 }
 
@@ -234,6 +238,7 @@ func GuardarUltimoNumero(num int) error {
 }
 
 func ImprimirPares(cantidadCodigos int) error {
+
 	impresora, err := ObtenerImpresoraPredeterminada()
 	if err != nil {
 		return err
@@ -247,6 +252,7 @@ func ImprimirPares(cantidadCodigos int) error {
 	}
 	totalPares := cantidadCodigos / 2
 	contador := ultimoNumero
+	fmt.Println("Imprimiendo. espere por favor")
 	for i := range totalPares {
 
 		contador++
@@ -266,7 +272,7 @@ func ImprimirPares(cantidadCodigos int) error {
 			return fmt.Errorf("error en par %d: %v", i+1, err)
 		}
 
-		fmt.Printf("Par %d/%d impreso: Z%s y Z%s\n", i+1, totalPares, c1, c2)
+		// fmt.Printf("Par %d/%d impreso: Z%s y Z%s\n", i+1, totalPares, c1, c2)
 	}
 
 	return nil
