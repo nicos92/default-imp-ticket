@@ -198,7 +198,7 @@ func LeerUltimoNumero() int {
 }
 
 func GuardarUltimoNumero(num int) error {
-	return os.WriteFile(archivoEstado, []byte(fmt.Sprintf("%d", num)), 0644)
+	return os.WriteFile(archivoEstado, fmt.Appendf(nil, "%d", num), 0644)
 }
 
 // 5. Función Principal de Impresión en Pares
